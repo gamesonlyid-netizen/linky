@@ -1,0 +1,377 @@
+syntax = "proto3";
+
+option csharp_namespace = "Nxl.NetworkService.CommProtocol";
+package uvc.uicif;
+
+import "google/protobuf/any.proto";
+
+message UvcUicCommMessage {
+
+    //This data type is ported from Kxlf.Infrastructure.UComm.RequestIdentifier to
+    //keep consistency with KXL/Mosaic firmware communication scheme
+    //IDs that are not used in this product release are stripped out,
+    //but their position are kept to be add back if needed.
+    enum RequestId {
+                                                  // Response type expected
+        UI_ID_UNKNOWN                  = 0;
+
+        UI_START_SELF_TEST             = 0x04;    // SystemTestResults
+
+        UI_CANCEL_TREATMENT            = 0x06;    // GenericResponse
+
+        UI_START_TREATMENT             = 0x08;    // GenericResponse
+
+        UI_TREATMENT_PAUSE             = 0x0A;    // GenericResponse
+
+        UI_GET_TREATMENT_DATA          = 0x0D;    // GetTreatmentDataResponse
+
+        UI_QUERY_SYSTEM_INFO           = 0x50;    // QuerySystemInfoResponse
+
+        UI_NOTIFY_ALIGNMENT_START      = 0x61;    // GenericResponse
+
+        UI_MOVE_CAMERA_TO_NFOV         = 0x62;    // GenericResponse
+
+        UI_SYSTEM_SHUTDOWN             = 0x80;    // GenericResponse
+    }
+
+    //This type is ported from Kxlf.Infrastructure.UComm.ErrorCode.PrimaryErrorCode
+    //ERROR_SYSTEM_FATAL makes  to be the default
+    //To make backward compatibility, please don't delete or modify existing entries;
+    //append your new one to the list instead.
+    enum SystemErrorCode {
+
+        ERROR_NA                       = 0;
+        ERROR_SYSTEM_FATAL             = 1;
+        ERROR_UART_FRAME_ERROR         = 2;
+        ERROR_UART_HW_OVERFLOW         = 3;
+        ERROR_COMM                     = 4;
+
+        ERROR_UVMON_PD1_H              = 10;
+        ERROR_UVMON_PD1_L              = 11;
+        ERROR_UVMON_I_H                = 12;
+        ERROR_UVMON_I_L                = 13;
+        ERROR_UVMON_TRMT_TIME_H        = 14;
+        ERROR_UVMON_TRMT_TIME_L        = 15;
+        ERROR_UVMON_OVERTEMP           = 16;
+        ERROR_UVMON_DAC_RB             = 17;
+
+        ERROR_UVMON_PD2_H              = 18;
+        ERROR_UVMON_PD2_L              = 19;
+
+        ERROR_XYZ_FAILED_HOMING        = 20;
+        ERROR_UV_SECURITY              = 21;
+
+        //New Entries here
+        ERROR_OPERATION_NOT_SUPPORTED  = 30;
+        ERROR_INVALID_OPERATION        = 31;
+    }
+
+    enum EyeTreated {
+        EYE_TYPE_UNKNOWN               = 0;
+        EYE_TYPE_OD                    = 1;
+        EYE_TYPE_OS                    = 2;
+    }
+
+    enum SystemEventType {
+        EVENT_UNKNOWN                  = 0;
+        EVENT_KEEP_ALIVE               = 1;
+        EVENT_EYE_ALIGNED              = 2;
+        EVENT_TREATMENT_TIME           = 3;
+        EVENT_TREATMENT_FINISHED       = 4;
+        EVENT_EYE_LOST                 = 5;    //Emit this event if eye is lost during alignment
+        EVENT_UV_PAUSED_EYE_LOST       = 6;    //Emit this event if eye is lost during UV treatment
+        EVENT_ERROR_OCCURRED           = 7;
+        EVENT_ALL_ERRORS_CLEARED       = 8;
+    }
+
+    message GenericRequest {
+        int32 Token                    = 1;    //Token to track to request
+        RequestId CommandId            = 2;    //Command Id
+    }
+
+    message ErrorData {
+        SystemErrorCode      Code      = 1;
+        string  Message                = 2;
+        google.protobuf.Any Data       = 3;
+    }
+
+    //For all response type, if Errors is null, the request is executed successfully
+    message GenericResponse {
+        int32 Token                    = 1;    //The same Token from the request to pass back
+        RequestId CommandId            = 2;    //Command Id
+        ErrorData Error                = 3;
+    }
+
+    message SetTreatmentParametersRequest {
+        int32 Token                    = 1;    //Token to track to request
+        string PatientId               = 3;
+        EyeTreated EyeTreated          = 4;
+        int32 UvIrradiance             = 5;    //mW/cm2
+        float UvDose                   = 6;    //J/cm2
+        float OuterDiameter_mm         = 7;
+        float InnerDiameter_mm         = 8;
+        float OffsetX_mm               = 9;
+        float OffsetY_mm               = 10;
+        bool IsDemoTreatment           = 11;
+        float ScanPitch                = 12;
+        float ScanPeriod               = 13;
+        string TreatmentId             = 14;
+        bool IsCustom                  = 15;
+    }
+
+    //At this time, I don't see the need of a response
+    message SetSystemDateTimeRequest {
+        int32 Token                    = 1;
+        uint32 Year                    = 2;
+        uint32 Month                   = 3;
+        uint32 Day                     = 4;
+        uint32 Hours                   = 5;
+        uint32 Minutes                 = 6;
+        uint32 Seconds                 = 7;
+        uint32 Milliseconds            = 8;
+    }
+
+    //This generic event should be used for simple notification without detailed data
+    //such as EYE_ALIGNED, EYE_LOST, UV_PAUSED_EYE_LOST, TREATMENT_FINISHED
+    message SimpleSystemEvent{
+        SystemEventType EventType      = 1;
+    }
+
+    message SystemErrorEvent {
+        SystemEventType EventType      = 1;
+        ErrorData       Data           = 2;
+    }
+
+    message SystemKeepAliveEvent {
+        SystemEventType EventType      = 1;
+
+    }
+
+    message SystemTreatmentTimeEvent {
+        SystemEventType EventType      = 1;
+        int64          Times_ms        = 2;    //Time elapsed in milliseconds
+    }
+
+    message QuerySystemInfoResponse {
+        int32 Token                    = 1;    //The same Token from the request to pass back
+        RequestId CommandId            = 2;    //Command Id
+
+        string UvcVersion              = 8;
+        string UvcSerialNumber         = 9;
+        string HbcVersion              = 10;
+        string HbcSerialNumber         = 11;
+        string PbcVersion              = 12;
+        string PbcSerialNumber         = 13;
+
+        bool IsCalibrationDataValid    = 5;
+        bool IsCameraWorking           = 6;
+        repeated ErrorData Errors      = 7;    //This is meaningful if system is in fault state
+    }
+
+    message SetTreatmentParametersResponse {
+        int32 Token                    = 1;    //The same Token from the request to pass back
+        ErrorData Error                = 3;    //This is meaningful if isSuccessful is false
+        int32 LaserPower_mW            = 4;
+        float TotalUVTime_Sec          = 5;    //The milliseconds part will be fractional
+    }
+
+    message TreatmentDataType {
+        message EventLog {
+            enum EventType {
+                EVENT_TYPE_UNKNOWN        = 0;
+                EVENT_TYPE_EM_TEMPERATURE = 1;
+                EVENT_TYPE_EM_DTR_STATUS  = 2;
+                EVENT_TYPE_DAC_RB         = 3;
+            }
+
+            EventType Type               = 1;
+            uint32 TimestampInSec        = 2;
+        }
+
+        bool IsValid                   = 1;
+        float PowerInWatts             = 2;
+        uint32 TreatmentTimeInSec      = 3;
+        bool DemoMode                  = 4;
+
+        uint32 UvPd1MinCounts          = 5;
+        uint32 UvPd1MaxCounts          = 6;
+        uint32 UvPd1AvgCounts          = 7;
+
+        uint32 UvPd2MinCounts          = 8;
+        uint32 UvPd2MaxCounts          = 9;
+        uint32 UvPd2AvgCounts          = 10;
+
+        float CalPowerInWatts          = 11;
+        uint32 CalDacTargetCounts      = 12;
+        uint32 CalPd1TargetCounts      = 13;
+        uint32 CalPd2TargetCounts      = 14;
+
+        repeated EventLog EventLogs    = 15;
+    }
+
+    message GetTreatmentDataResponse {
+        int32 Token                    = 1;    //The same Token from the request to pass back
+        RequestId CommandId            = 2;    //Command Id
+        ErrorData Error                = 3;    //This is meaningful if isSuccessful is false
+        TreatmentDataType Data         = 4;
+    }
+
+    message TestResult {
+        string Id                      = 1;
+        string Error                   = 2; // empty if no error
+        string Subsystem               = 3;
+        string Info                    = 4;
+    }
+
+    message SystemTestResults {
+        repeated TestResult Tests      = 1;
+    }
+
+    // Request the current state of the treatment machine
+    message TreatmentStateRequest {}
+
+    // All possible treatment states of the UVC
+    enum TreatmentState {
+      Initializing = 0;
+      Idle = 1;
+      ValidatingParams = 2;
+      PreparingForTreatment = 3;
+      ReadyToTreat = 4;
+      DeliveringTreatment = 5;
+      WaitForInductionComplete = 6;
+      Faulted = 7;
+    }
+
+    // The response containing the current state of the treatment machine
+    message TreatmentStateResponse {
+      TreatmentState oldState = 1;
+      TreatmentState newState = 2;
+    }
+
+    message PauseTreatmentRequest {}
+
+    message CancelTreatmentRequest {}
+
+    message CompleteInductionRequest {}
+
+    message DeliverTreatmentRequest {}
+
+    // Request that the UVC manually capture the current video
+    message CaptureVideo {}
+
+    // Verify capture is available by requesting the CaptureAvailability response
+    message IsCaptureAvailable {}
+
+    // This message is returned as a response to the IsCaptureAvailable request.
+    // This is also returned asynchronously when availability changes.
+    message CaptureAvailability {
+        bool is_available = 1;  // If false, a reason will be provided
+        enum Reason {
+            NotApplicable = 0;  // Given if capture is available
+            NotConfigured = 1;  // UVC not configured to provide manual capture
+            LimitReached = 2;   // The limit on manual captures has been reached
+        }
+        Reason reason = 2;
+    }
+
+    message TreatmentResultsRequest {
+      int32 Token                   = 1;
+    }
+
+    // Need broader discussion on results (i.e. event logging, etc.)
+    message TreatmentResultsResponse {
+      int32 Token                    = 1; // A proxy for treatment ID
+      string Error                   = 2; // If error exists, data is not valid
+      bool TreatmentCompleted        = 3; // True of the treatment ran to completion
+      float PowerInWatts             = 4;
+      uint32 TreatmentTimeInSec      = 5;
+      bool DemoMode                  = 6;
+
+      uint32 UvPd1MinCounts          = 7;
+      uint32 UvPd1MaxCounts          = 8;
+      uint32 UvPd1AvgCounts          = 9;
+
+      uint32 UvPd2MinCounts          = 10;
+      uint32 UvPd2MaxCounts          = 11;
+      uint32 UvPd2AvgCounts          = 12;
+
+      float CalPowerInWatts          = 13;
+      uint32 CalDacTargetCounts      = 14;
+      uint32 CalPd1TargetCounts      = 15;
+      uint32 CalPd2TargetCounts      = 16;
+    }
+
+    message QueryLaserAuthorizationRequest {}
+
+    message QueryLaserAuthorizationResponse {
+      bool authorized = 1;
+    }
+
+    message SetLaserAuthorizationEvent {
+      bool authorize = 1;
+    }
+
+    message SkipAlignment {}
+
+    message RunStartupTest {}
+
+    message LiftGoUpRequest {
+      bool enable = 1; // true = start going up, false = stop going up 
+    }
+
+    message LiftGoDownRequest {
+      bool enable = 1; // true = start going down, false = stop going down 
+    }
+
+    message BrakeControlRequest {
+      bool release = 1; // true = to release the break, false = to lock the break
+    }
+
+    oneof msg {
+        GenericRequest REQGeneric                             = 1;
+        GenericResponse RSPGeneric                            = 2;
+        SetTreatmentParametersRequest REQTreatmentParameters  = 3;
+        SetSystemDateTimeRequest REQChangeSystemDateTime      = 4;
+
+        QuerySystemInfoResponse RSPSystemInfo                 = 6;
+        SetTreatmentParametersResponse RSPTreatmentParameters = 7;
+        GetTreatmentDataResponse RSPTreatmentData             = 8;
+
+        SimpleSystemEvent EVTSimple                           = 11;
+        SystemErrorEvent EVTError                             = 12;
+        SystemKeepAliveEvent EVTKeepAlive                     = 13;
+        SystemTreatmentTimeEvent EVTTreatmentTime             = 14;
+
+        SystemTestResults EVTStartupTestResults               = 15;
+        SystemTestResults EVTSelfTestResults                  = 26;
+
+        TreatmentStateRequest REQTreatmentState               = 16;
+        TreatmentStateResponse RSPTreatmentState              = 17;
+        PauseTreatmentRequest REQPauseTreatment               = 18;
+        CancelTreatmentRequest REQCancelTreatment             = 19;
+        CompleteInductionRequest REQCompleteInduction         = 20;
+        TreatmentResultsRequest REQTreatmentResults           = 23;
+        TreatmentResultsResponse RSPTreatmentResults          = 24;
+        DeliverTreatmentRequest REQDeliverTreatment           = 25;
+
+        // This request comes from the UVC and the response comes from the UIC,
+        // opposite to other messages defined in this file.
+        QueryLaserAuthorizationRequest REQLaserAuthorization  = 27;
+        QueryLaserAuthorizationResponse RSPLaserAuthorization = 28;
+        SetLaserAuthorizationEvent EVTSetLaserAuthorization   = 29;
+
+        // This is accepted in the PreparingForTreatment state and should prompt
+        // a state transition to ReadyToTreat (assuming all other components are ReadyToTreat)
+        SkipAlignment REQSkipAlignment                        = 30;
+
+        CaptureVideo REQCaptureVideo                          = 31;
+        IsCaptureAvailable REQIsCaptureAvailable              = 32;
+        CaptureAvailability RSPCaptureAvailability            = 33;
+
+        RunStartupTest run_startup_test                       = 34;
+
+        LiftGoUpRequest REQLiftGoUp                           = 35;
+        LiftGoDownRequest REQLiftGoDown                       = 36;
+        BrakeControlRequest REQBrakeControl                   = 37;
+    }
+}

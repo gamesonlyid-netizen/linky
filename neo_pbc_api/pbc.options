@@ -1,0 +1,4 @@
+* mangle_names:M_STRIP_PACKAGE
+ToPbc submsg_callback:true
+SetSerialNumber.serial_number max_size:16
+LogEntry.text max_size:128

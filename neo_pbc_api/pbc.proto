@@ -1,0 +1,174 @@
+syntax = "proto3";
+
+package Pbc;
+
+message GetAbout {
+}
+
+message About {
+    string version = 1;
+    string bootloader_version = 2;
+    string serial_number = 3;
+    string mac_address = 4;
+    uint32 uptime_ms = 5;
+}
+
+message GetStatus {
+}
+
+message Status {
+    bool power_supply_ac_is_ok = 1;
+    bool power_supply_dc_is_ok = 2;
+    bool power_supply_ch1_is_ok = 3;
+    bool power_supply_ch2_is_ok = 4;
+    bool power_supply_ch3_is_ok = 5;
+    bool power_supply_fan1_is_ok = 6;
+    bool power_supply_fan2_is_ok = 7;
+    bool brake_is_released = 8;
+    bool brake_shoulder_is_released = 9;
+    bool fan1_is_ok = 10;
+    bool fan2_is_ok = 11;
+    bool fan3_is_ok = 12;
+    bool estop_is_pressed = 13;
+    bool netswitch_power_is_ok = 14;
+    float temperature_c = 15;
+    float humidity_rh = 16;
+}
+
+message BinaryFile {
+    uint32 length_in_bytes = 1;
+    bytes data = 2;
+}
+
+message GetControls {
+}
+
+message Controls {
+	bool usb_port_1_channel_1_enable = 1;
+	bool usb_port_1_channel_2_enable = 2;
+	bool usb_port_2_channel_1_enable = 3;
+	bool usb_port_2_channel_2_enable = 4;
+	bool brake_enable = 5;
+	bool fans_enable = 6;
+}
+
+message GetDeviceLimits {
+}
+
+message DeviceLimits {
+	float ambient_temperature_upper_limit_c = 1;
+	float ambient_temperature_lower_limit_c = 2;
+	float ambient_humidity_upper_limit_rh = 3;
+	float ambient_humidity_lower_limit_rh = 4;
+}
+
+message SetBrakeControls {
+	bool brake_enable = 1;
+}
+
+message SetFanControls {
+	bool fans_enable = 1;
+}
+
+message SetUsbPowerControls {
+	bool port_1_channel_1_enable = 1;
+	bool port_1_channel_2_enable = 2;
+	bool port_2_channel_1_enable = 3;
+	bool port_2_channel_2_enable = 4;
+}
+
+message SetSerialNumber {
+	string serial_number = 1;
+}
+
+message StartLedStripStaticColorEffect {
+	uint32 red = 1;
+	uint32 green = 2;
+	uint32 blue = 3;
+}
+
+message StartLedStripPulseEffect {
+	uint32 red = 1;
+	uint32 green = 2;
+	uint32 blue = 3;
+	uint32 pulse_period_ms = 4;
+}
+
+message StartLedStripRainbowEffect {
+}
+
+message StartLedStripChasingRainbowEffect {
+}
+
+message RequestRejected {
+    uint32 to_pbc_which_oneof_tag = 1;
+    string reason = 2;
+    string details = 3;
+}
+
+message ValueOutOfRange {
+    float measured_value = 1;
+    float upper_limit = 2;
+    float lower_limit = 3;
+}
+
+message HardwareFault {
+    bool is_faulted = 1;
+}
+
+message Timeout {
+}
+
+message SystemError {
+    oneof e {
+       ValueOutOfRange ambient_temperature_error = 1;
+       ValueOutOfRange ambient_humidity_error = 2;
+       HardwareFault fan1_error = 3;
+       HardwareFault fan2_error = 4;
+       HardwareFault fan3_error = 5;
+    }
+    string details = 1024;
+}
+
+message LogEntry {
+    uint32 timestamp_ms = 1;
+    string text = 2;
+}
+
+message KeepAlive {
+    uint32 sequence_number = 1;
+    uint32 timestamp_ms = 2;
+}
+
+message ToPbc {
+    oneof msg {
+        GetAbout get_about = 1;
+        GetStatus get_status = 2;
+        BinaryFile firmware_image = 3;
+        GetControls get_controls = 4;
+        GetDeviceLimits get_device_limits = 5;
+        SetBrakeControls set_brake_controls = 6;
+        SetFanControls set_fan_controls = 7;
+        SetUsbPowerControls set_usb_power_controls = 8;
+        SetSerialNumber set_serial_number = 9;
+        StartLedStripStaticColorEffect start_led_strip_static_color_effect = 10;
+        StartLedStripPulseEffect start_led_strip_pulse_effect = 11;
+        StartLedStripRainbowEffect start_led_strip_rainbow_effect = 12;
+        StartLedStripChasingRainbowEffect start_led_strip_chasing_rainbow_effect = 13;
+        KeepAlive keep_alive = 14;
+    }
+}
+
+message FromPbc {
+    oneof msg {
+        About about = 1;
+        Status status = 2;
+        Controls controls = 3;
+        DeviceLimits device_limits = 4;
+        RequestRejected request_rejected = 5;
+        SystemError system_error = 6;
+        LogEntry log_entry = 7;
+        KeepAlive keep_alive = 8;
+  }
+}
+
